@@ -18,22 +18,20 @@ import rev.orm.services.ORMServices;
 
 public class WebAppController extends HttpServlet {
 	
-	ORMServices or = new ORMServices();
-	Account ac = new Account();
+	private ORMServices or = new ORMServices();
+	private Account ac = new Account();
 	private ObjectMapper objectMapper = new ObjectMapper();
 	@Override
 	protected void doGet(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
 		
 		String URI = request.getRequestURI();
-		System.out.println(URI);
 		
 		String[] urlSections = URI.split("/");
 		
 		if (urlSections.length == 3) {
 			List<Object> listAccount = or.retriveAll(ac);
 			String json = objectMapper.writeValueAsString(listAccount);
-			System.out.println(json);
 
 			PrintWriter printWriter = response.getWriter();
 
@@ -76,20 +74,23 @@ public class WebAppController extends HttpServlet {
 		BufferedReader reader = request.getReader();
 
 		String line = reader.readLine();
+		if(line != null) {
+			while (line != null) {
+				sb.append(line);
+				line = reader.readLine();
+			}
 
-		while (line != null) {
-			sb.append(line);
-			line = reader.readLine();
+			String json = new String(sb);
+			
+			Account addAccount = objectMapper.readValue(json, Account.class);
+			
+			or.insertNewObject(addAccount);
+			
+			response.setStatus(201);			
+		}else {
+			response.setStatus(404);
 		}
 
-		String json = new String(sb);
-		System.out.println(json);
-		
-		Account addAccount = objectMapper.readValue(json, Account.class);
-		
-		or.insertNewObject(addAccount);
-		
-		response.setStatus(201);
 	}
 	
 	@Override
@@ -117,6 +118,9 @@ public class WebAppController extends HttpServlet {
 
 				String json = new String(sb);
 				Account updatedAccount = objectMapper.readValue(json, Account.class);
+				
+				//Compares the "User" that is being updated to the JSON marshaling object "UpdatedAccount" fields 
+				//Allows for multiple fields to be updated at the same time
 				for(int i = 1; i < 5;) {
 					if(tempAccountUsername.getAccountName() != updatedAccount.getAccountName()) {
 						or.updateRowContentByColumn(updatedAccount.getAccountName(), i, tempAccountUsername.getAccountName(), i, ac);
@@ -138,12 +142,13 @@ public class WebAppController extends HttpServlet {
 						or.updateRowContentByColumn(String.valueOf(updatedAccount.getZipcode()), i, String.valueOf(tempAccountUsername.getZipcode()), i, ac);
 					}
 				}
+				response.setStatus(200);
+			}else {
+				response.setStatus(404);
 			}
-
-
+		}else {
+			response.setStatus(404);
 		}
-		
-		response.setStatus(201);
 	}
 	
 	@Override
@@ -156,8 +161,11 @@ public class WebAppController extends HttpServlet {
 			String userName = String.valueOf(urlSections[3]);
 			Account deleteAccountByUsername = (Account) or.retriveRowContentByColumn(userName, 3, ac);	
 			or.deleteRowContentByColumn(userName, 3, deleteAccountByUsername);
+			response.setStatus(200);
+		}else {
+			response.setStatus(404);
 		}
-		response.setStatus(201);
+		
 	}
 	
 }
